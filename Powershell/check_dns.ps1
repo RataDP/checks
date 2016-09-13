@@ -1,4 +1,4 @@
-﻿<# 
+﻿<#
   Check para comprobar una resolución DNS en Windows
 
   @lastModified: 07/06/2016
@@ -7,16 +7,17 @@
     -name `<Nombre a resolver`>
     -dname `<Nombre para el servicio`>
     -ip `<Ip a comparar`>
+    -h Ayuda
 #>
 
 param(
-    [switch]$help = $false,
+    [switch]$h = $false,
     [string]$name = $(Throw("Parameter -name is required")),
     [string]$dname = $name,
     [string]$ip = $(Throw("Parameter -ip is required"))
 )
 
-If ( $help ) {
+If ( $h ) {
     Write-Host "Usage:`n`tcheck_dns.ps1 -name `<FQDN`> [-dname `<name_service`>] -ip `<ip_to_compare`>"
     Write-Host "`n----------------------"
     Write-Host "This program is for check Windows DNS resolution from the Check_MK Windows Agent."
@@ -26,7 +27,7 @@ If ( $help ) {
     Write-Host "-ip `<ip`> `tIP to compare the results."
     Write-Host "-help `tDisplay this message"
     Write-Host "`n----------------------`n"
-    Write-Host "More infomation in `$MyGithub"
+    Write-Host "More infomation in https://github.com/RataDP/checks"
     Exit
 }
 

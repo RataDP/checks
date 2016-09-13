@@ -1,22 +1,38 @@
 ﻿<# Check para servicios de la 3CX
   Para los propios de 720tec
-  @Author: Borja Blasco
+  @Author: Borja Blasco <bblasco@720tec.es>
   @param:
     -services <servicio que se quiera monitorizar>
     -name <nombre del check>
     -v : Verbose
+    -h : Ayuda
 #>
 
 param(
-    [string]$services = "3CX*",
-    [string]$name = "3CX_Services",
-    [switch]$v = $false 
+    [switch]$h = $false,
+    [string]$services = $(Throw("Parameter -services is required")),
+    [string]$name = "SERVICES",
+    [switch]$v = $false
 )
 
 $vk = @() # Array de resultados OK
 $warn = @() # Array de resultados WARN
 $crit = @() # Array de resultados CRIT
 $Status = 3 # Por defecto es UNK
+
+If ( $h ) {
+    Write-Host "Usage:`n`tcheck_services.ps1 -services `<service`> [-name `<name_service`> -v]"
+    Write-Host "`n----------------------"
+    Write-Host "This program is for check Windows services from the Check_MK Windows Agent."
+    Write-Host "----------------------`n"
+    Write-Host "-services `<services`> `tName of service or RegEx to match."
+    Write-Host "-name `<service_name`> `tName for the check. If it is missing, it will name `"services`". It will be display in the monitor."
+    Write-Host "-v `t Verbose mode, the output shows more information."
+    Write-Host "-help `tDisplay this message"
+    Write-Host "`n----------------------`n"
+    Write-Host "More infomation in https://github.com/RataDP/checks"
+    Exit
+}
 
 $list_serv = Get-Service -name $services # Obtener los servicios que cuadran con $services
 
@@ -38,13 +54,13 @@ ForEach( $serv in $list_serv ) {
    }
 }
 
-If ( $Status -eq 3 -and $warn.Count -eq 0 -and $crit.Count -eq 0 ) { $Status = 0 } 
+If ( $Status -eq 3 -and $warn.Count -eq 0 -and $crit.Count -eq 0 ) { $Status = 0 }
 
 <# PRINT #>
 If ( $Status -eq 0 ) { # OK
     If ($v -eq $false) { Write-Host "$($Status) $($name) - OK ($($vk.Count))" }
-    Else { Write-Host "$($Status) $($name) - OK Todos los servicios automáticos RUNNING ($($vk.Count))" }
-} 
+    Else { Write-Host "$($Status) $($name) - OK All the automatic services are running ($($vk.Count))" }
+}
 
 ElseIf ( $Status -eq 1 ) { # WARN
     If ($v -eq $false) { Write-Host "$($Status) $($name) - WARN - W ($($warn.Count)), OK ($($vk.Count))" }
@@ -60,7 +76,7 @@ ElseIf ( $Status -eq 1 ) { # WARN
         }
         Write-Host " -OK: $($vk.Count)"
     }
-} 
+}
 
 Else { # CRIT
     If ($v -eq $false) { Write-Host "$($Status) $($name) - CRIT - C ($($crit.Count)), W ($($warn.Count)), OK ($($vk.Count))" }
@@ -86,4 +102,3 @@ Else { # CRIT
         Write-Host " -OK: ($($vk.Count))"
     }
 }
-
