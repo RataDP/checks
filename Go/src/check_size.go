@@ -6,7 +6,7 @@ package main
 
  NOTE: Both flags, -w and -c must be set for alerts. For now, just with one the check will fail.
 
- USAGE: checkSize -path <path_to_file> -file <file> [-w <size>[k|m|g] -c <size>[k|m|g]]
+ USAGE: checkSize -path <path_to_file> -file <file> [-w <size>[k|m|g] -c <size>[k|m|g] -name <service_name>]
  Default size by Bytes
 */
 import (
@@ -21,6 +21,7 @@ import (
 type CheckStatus struct {
   code int
   message string
+  checkName string
   file string
   pathfile string
   warn int
@@ -38,6 +39,7 @@ func main() {
   file := flag.String("file", "", "File's name")
   warn := flag.String("w", "", "When warning is triggered")
   crit := flag.String("c", "", "When critical is triggered")
+  name := flag.String("name", "", "Name for the service")
 
   flag.Parse()
 
@@ -45,7 +47,7 @@ func main() {
     error(3, "Missing -path or -file. Unable to check")
     return
   }
-
+  status.checkName = *name
   status.file = *file
   // Reemplazar . (dots) por -, genera un fallo con el check
   status.file = strings.Replace(status.file, ".", "-", -1)
@@ -115,19 +117,13 @@ func main() {
   check()
 
   fmt.Println(output())
+  os.Exit(status.code)
 }
 
 // check is the main function. Performs the check
 func check() {
-  file, err := os.Open(status.pathfile)
-  defer file.Close()
+  fileStat, err := os.Stat(status.pathfile)
 
-  if err != nil {
-    error(3, err.Error())
-    return
-  }
-
-  fileStat, err := file.Stat()
   if err != nil {
     fmt.Println("ERROR STAT ", err)
     return
@@ -167,14 +163,17 @@ func output() string {
 
     if status.warnParam != "" && status.critParam != "" {
       status.message += " (" + status.warnParam + "/" + status.critParam + ")"
-      out = fmt.Sprintf("%d Size_%s size=%d;%d;%d %s", status.code, status.file, status.value, status.warn, status.crit, status.message)
+      // out = fmt.Sprintf("%d Size_%s size=%d;%d;%d %s", status.code, status.checkName, status.value, status.warn, status.crit, status.message)
+      out = fmt.Sprintf("%s|size=%d;%d;%d;;", status.message, status.value, status.warn, status.crit)
     } else {
-      out = fmt.Sprintf("%d Size_%s size=%d %s", status.code, status.file, status.value, status.message)
+      // out = fmt.Sprintf("%d Size_%s size=%d %s", status.code, status.checkName, status.value, status.message)
+      out = fmt.Sprintf("%s|size=%d;;;;", status.message, status.value)
     }
     return out
   }
   status.message = "UNK - " + status.message
-  out = fmt.Sprintf("%d Size_%s - %s", status.code, status.file, status.message)
+  // out = fmt.Sprintf("%d Size_%s - %s", status.code, status.checkName, status.message)
+  out = fmt.Sprintf("%s", status.message)
   return out
 
 }
