@@ -43,11 +43,11 @@ def check(date_to_check, threshold):
         status = 1
 
     if status == 0:
-        print "Ultima modificacion de {0} hace {1} dias, {2}|last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
+        print "Ultima modificacion de {0} hace {1} dias, {2} |last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
     elif status == 1:
-        print "Ultima modificacion de {0} hace {1} dias, {2}. ({3})last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
+        print "Ultima modificacion de {0} hace {1} dias, {2}. ({3}) |last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
     else:
-        print "Ultima modificacion de {0} hace {1} dias, {2}. ({4})last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
+        print "Ultima modificacion de {0} hace {1} dias, {2}. ({4}) |last={1};{3};{4};;".format(args.file, td_result.days, modify_date, threshold[0], threshold[1])
 
     return status
 
