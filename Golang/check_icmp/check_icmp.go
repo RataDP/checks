@@ -13,15 +13,13 @@ package main
     http://www.720tec.es
     Borja Blasco García <bblasco@720tec.es>
     Check icmp
-    Version 1.0
+    Version 1.1
 
- NOTE: When a threshold is set, both levels, critical and warning, h
-
- USAGE: checkSize -path <path_to_file> -file <file> [-w <size>[k|m|g]] [-c <size>[k|m|g]] [-name <service_name>]
- Default size by Bytes
+USAGE: check_icmp -ip <Remote_IP> [-packet <number_packets>] [-wrtt <time_warn>] [-wpt <packet_warn>] [-crtt <time_crit>] [-cpl <packet_crit>]
 */
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"net"
@@ -33,7 +31,6 @@ import (
 
 type CheckStatus struct {
 	code       int
-	message    string
 	ip         string
 	packets    int
 	time       float64
@@ -61,7 +58,10 @@ func main() {
 	ctime := flag.Float64("crtt", 0.0, "Response time for critical")
 	wpkt := flag.Float64("wpl", 0.0, "Percent of packets lost for warning")
 	cpkt := flag.Float64("cpl", 0.0, "Percent of packets lost for critical")
-
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "USAGE: %s -ip <Remote_IP> [-packet <number_packets>] [-wrtt <time_warn>] [-wpt <packet_warn>] [-crtt <time_crit>] [-cpl <packet_crit>]\n ", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *ip == "" {
@@ -81,9 +81,8 @@ func main() {
 	} else {
 		status.threshold = true
 	}
-
 	check()
-	fmt.Println(output())
+	fmt.Print(output(""))
 	os.Exit(status.code)
 }
 
@@ -92,7 +91,7 @@ func check() {
 	pinger := fastping.NewPinger()
 	ra, err := net.ResolveIPAddr("ip4:icmp", status.ip)
 	if err != nil {
-		error(UNK, "Error RESOLVIP")
+		error(UNK, fmt.Sprintf("\"%s\" not a valid IP", status.ip))
 	}
 	pinger.AddIPAddr(ra)
 	var count int = 0
@@ -138,37 +137,44 @@ func check() {
 	}
 }
 
-func output() string {
+func output(msg string) string {
 	if status.code != UNK {
+		var buffer bytes.Buffer
 		if status.time != 0 {
-			status.message = fmt.Sprintf("Responde time to %s %.3f ms, packets lost %.2f%%", status.ip, status.time, status.pktpercent*100)
+			buffer.WriteString(fmt.Sprintf("Responde time to %s %.3f ms, packets lost %.2f%%", status.ip, status.time, status.pktpercent*100))
 		} else {
-			status.message = fmt.Sprintf("No response from %s. 100%% packets lost", status.ip)
+			buffer.WriteString(fmt.Sprintf("No response from %s. 100%% packets lost", status.ip))
 		}
 
 		// perf data
-		var perfData string = "|"
+		buffer.WriteString(fmt.Sprintf("|rtt=%.3fms;", status.time))
 		if status.wtime != 0.0 {
-			perfData = fmt.Sprintf("%s rtt=%.3fms;%.3fms;%.3fms;;", perfData, status.time, status.wtime, status.ctime)
-		} else {
-			perfData = fmt.Sprintf("%s rtt=%.3fms;;;;", perfData, status.time)
+			buffer.WriteString(fmt.Sprintf("%.3fms", status.wtime))
 		}
+		buffer.WriteString(";")
+		if status.ctime != 0.0 {
+			buffer.WriteString(fmt.Sprintf("%.3fms", status.ctime))
+		}
+		buffer.WriteString(";;;") // Final de rtt
+
+		buffer.WriteString(fmt.Sprintf(" packetlost=%.2f%%;", status.pktpercent*100))
+		if status.wpacket != 0.0 {
+			buffer.WriteString(fmt.Sprintf("%.2f%%", status.wpacket))
+		}
+		buffer.WriteString(";")
 		if status.cpacket != 0.0 {
-			perfData = fmt.Sprintf("%s packetlost=%.2f%%;%.2f%%;%.2f%%;;", perfData, status.pktpercent*100, status.wpacket, status.cpacket)
-		} else {
-			perfData = fmt.Sprintf("%s packetlost=%.2f%%;;;;", perfData, status.pktpercent*100)
+			buffer.WriteString(fmt.Sprintf("%.2f%%", status.cpacket))
 		}
-		status.message += perfData
-		return status.message
+		buffer.WriteString(";;;") // final de packetlost
+		return buffer.String()
 	} else {
 		// UNK
-		return status.message
+		return msg
 	}
 }
 
 func error(code int, message string) {
 	status.code = code
-	status.message = message
-	fmt.Println(output())
+	fmt.Println(output(message))
 	os.Exit(code)
 }
