@@ -13,7 +13,7 @@ package main
     http://www.720tec.es
     Borja Blasco García <bblasco@720tec.es>
     Check size - Check the size of a file
-    Version 1.1
+    Version 1.2
 
  NOTE: Both flags, -w and -c must be set for alerts. For now, just with just one the check will fail.
 
@@ -77,7 +77,6 @@ func main() {
 				val, err := strconv.Atoi(ele)
 				if err != nil {
 					error(3, "Error casting -w or -c")
-					return
 				}
 				value = val
 			} else {
@@ -85,7 +84,6 @@ func main() {
 				val, err := strconv.Atoi(ele[:len(ele)-1])
 				if err != nil {
 					error(3, "Error casting -w or -c")
-					return
 				}
 				switch letter {
 				case 'K', 'k':
@@ -96,7 +94,6 @@ func main() {
 					value = val * (1 << 30)
 				default:
 					error(3, "Wrong unit on -w or -c. Avaliable K,M,G")
-					return
 				}
 			}
 			// rellnar con el valor en bytes
@@ -109,7 +106,6 @@ func main() {
 	}
 	if status.warn > status.crit {
 		error(3, "Warning value is higher than Critical.")
-		return
 	}
 
 	var pa string = *path
@@ -136,13 +132,11 @@ func check() {
 	fileStat, err := os.Stat(status.pathfile)
 
 	if err != nil {
-		fmt.Println("ERROR STAT ", err)
-		return
+		error(3, fmt.Sprintf("Error opening file %s", status.pathfile))
 	}
 
 	if fm := fileStat.Mode(); fm.IsDir() {
 		error(3, "File is a directory")
-		return
 	}
 
 	status.value = fileStat.Size()
@@ -191,6 +185,7 @@ func error(code int, message string) {
 	status.code = code
 	status.message = message
 	fmt.Println(output())
+	os.Exit(code)
 }
 
 // Summarize the size of the file
@@ -199,20 +194,19 @@ func size() string {
 	var m float64 = 1
 	var v float64 = float64(status.value)
 	var i int = 0
-	var out string
 	for v/m > 1024 {
 		m = m * 1024
 		i++
 	}
 	switch i {
 	case 0:
-		out = fmt.Sprintf("%.2f B", v/m)
+		return fmt.Sprintf("%.2f B", v/m)
 	case 1:
-		out = fmt.Sprintf("%.2f KB", v/m)
+		return fmt.Sprintf("%.2f KB", v/m)
 	case 2:
-		out = fmt.Sprintf("%.2f MB", v/m)
+		return fmt.Sprintf("%.2f MB", v/m)
 	case 3:
-		out = fmt.Sprintf("%.2f GB", v/m)
+		return fmt.Sprintf("%.2f GB", v/m)
 	}
-	return out
+	return "Not ready for this size, larger than TB"
 }
