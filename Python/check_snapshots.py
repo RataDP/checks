@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # @Author: Borja Blasco García <bblasco@720tec.es>
 # Check para comprobar las snapshots de las VMs en un vCenter
@@ -63,6 +64,11 @@ def get_data(si):
             for snap in vm.snapshot.rootSnapshotList:
                 vm_datos['snapshots'] += 1
                 vm_datos['snapshots_list'].append(snap)
+                # Recorrer la snapshots hijas #TODO comprobar que se llame asi la estructura
+                if snap.childSnapshotList is not None:
+                    for ch_snap in snap.childSnapshotList:
+                        vm_datos['snapshots'] += 1
+                        vm_datos['snapshots_list'].append(ch_snap)
             vms.append(vm_datos)
 
     return vms
@@ -77,11 +83,12 @@ def check(data, nsnap, ndays, show_recent):
 
     if data is not None:
         vms_names = []
+        vms_snapshots = []
         number_snap = 0 # Número de snapshots
         vm_oldest_snap = None
-        vm_recent_snap = None
+        vm_newest_snap = None
         oldest_snap = None # La snapshot mas vieja
-        recent_snap = None
+        newest_snap = None
         td_old = None
         td_recent = None
         # td_old = today - data[0]['snapshots'][0].createTime.replace(tzinfo=None) # timedelta, dias atras que se hizo
@@ -100,24 +107,25 @@ def check(data, nsnap, ndays, show_recent):
                         vm_oldest_snap = vm
                         # Comprobar fecha, se cambia el tz para poder hacer la operacion si no falla
                         td_old = today - snap.createTime.replace(tzinfo=None)
-                if recent_snap is None:
-                    recent_snap = snap
-                    vm_recent_snap = vm
+                if newest_snap is None:
+                    newest_snap = snap
+                    vm_newest_snap = vm
                     td_recent = today - snap.createTime.replace(tzinfo=None)
                 else:
-                    if recent_snap.createTime < snap.createTime:
-                        recent_snap = snap
-                        vm_recent_snap = vm
+                    if newest_snap.createTime < snap.createTime:
+                        newest_snap = snap
+                        vm_newest_snap = vm
                         # Comprobar fecha, se cambia el tz para poder hacer la operacion si no falla
                         td_recent = today - snap.createTime.replace(tzinfo=None)
 
+        # PREPARAR OUTPUT
         NSNAP = number_snap
         AGE = td_old.days
         # There are <number> in <host>. <excla>
-        number_format = 'There are {} snapshots {}.{}'
+        number_format = 'There are {} snapshots ({}).{}'
         # The oldest snapshot has <days> days. <excla>
         age_format = 'The oldest snapshot has {} days ({}).{}'
-        newest_snap_str = 'The newest snapshot has {} days ({}).'.format(td_recent.days, vm_recent_snap['vm'])
+        newest_snap_str = 'The newest snapshot has {} days ({}).'.format(td_recent.days, vm_newest_snap['vm'])
 
         status_n = 0
         status_d = 0
@@ -127,7 +135,7 @@ def check(data, nsnap, ndays, show_recent):
             for i, threshold in enumerate(nsnap):
                 if threshold is not None and int(threshold) <= number_snap:
                     status_n = i + 1
-        number_str = number_format.format(number_snap, tuple(vms_names), '('+'!'*(status_n)+')' if status_n != 0 else '')
+        number_str = number_format.format(number_snap, ', '.join(i for i in vms_names), '('+'!'*(status_n)+')' if status_n != 0 else '')
         if ndays != (None, None):
             # Comprobar la edad de la snap mas vieja
             # i sera 0 o 1. el 0 sera el warn y el 1 crit. Por lo que el estado sera i+1 si es mayor al valor obtenido
@@ -185,5 +193,7 @@ if __name__ == '__main__':
     str_output = check(get_data(si), (args.warning_snapshots, args.critical_snapshots), (args.warning_days, args.critical_days), args.recent_snapshot)
 
     str_output = '{}{}'.format(str_output, PERF_FORMAT.format_map({'num_snaps': NSNAP, 'w_snap': args.warning_snapshots if args.warning_snapshots else '', 'c_snap': args.critical_snapshots if args.critical_snapshots else '', 'days': AGE, 'w_days': args.warning_days if args.warning_days else '', 'c_days': args.critical_days if args.critical_days else ''}))
+
+    # Imprimir salida
     print(str_output)
     exit(STATUS)
