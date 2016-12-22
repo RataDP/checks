@@ -135,7 +135,7 @@ def check(data, nsnap, ndays, verbose):
                         td_recent = today - snap.createTime.replace(tzinfo=None)
             # AÑADIDO
             # tupla_vms_snap.append('{}({})'.format(vm['vm'], vm['snapshots']))
-            nsnap_vm.append(number_snap)
+            nsnap_vm.append(vm['snapshots'])
             if oldest_snap_vm is not None:
                 days_vm.append((today - oldest_snap_vm.createTime.replace(tzinfo=None)).days)
 
@@ -168,12 +168,6 @@ def check(data, nsnap, ndays, verbose):
                     if td <= td_old:
                         status_d = i + 1
 
-        # OUTPUT NUMERO
-        if number_snap != 1: # Plural
-            lista_vms_stats = ', '.join('{}({}, {}d)'.format(vms_names[i], nsnap_vm[i], days_vm[i]) for i in range(len(vms_names)))
-            number_str = number_format.format(number_snap, lista_vms_stats, '('+'!'*(status_n)+')' if status_n != 0 else '')
-        else: # Singular
-            number_str = 'There is an snapshot, {}.{}'.format(', '.join('{}({},{}d)'.format(vms_names[0], nsnap_vm[0], days_vm[0])),'('+'!'*(status_n)+')' if status_n != 0 else '')
 
         # STATUS a global para el perf
         if status_n == 0 and status_d == 0:
@@ -182,6 +176,13 @@ def check(data, nsnap, ndays, verbose):
             STATUS = 2
         else:
             STATUS = 1
+
+        # OUTPUT NUMERO
+        if number_snap != 1: # Plural
+            lista_vms_stats = ', '.join('{}({}, {}d)'.format(vms_names[i], nsnap_vm[i], days_vm[i]) for i in range(len(vms_names)))
+            number_str = number_format.format(number_snap, lista_vms_stats, '('+'!'*(STATUS)+')' if STATUS != 0 else '')
+        else: # Singular
+            number_str = 'There is an snapshot, {}.{}'.format('{}({},{}d)'.format(vms_names[0], nsnap_vm[0], days_vm[0]),'('+'!'*(STATUS)+')' if STATUS != 0 else '')
 
         # PRINT OUTPUT CHECK
         if verbose:
