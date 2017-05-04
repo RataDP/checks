@@ -52,14 +52,16 @@ def get_data(si):
     def walk_snapshots(snap, lista):
         _nsnap = 0
         if len(snap.childSnapshotList) == 0:
-            lista.append(snap)
-            _nsnap += 1 # Añadir la propia
+            if "CompleteRestorePoint" not in snap.description: # Evitar que las replicas de veeam aparezcan
+                lista.append(snap)
+                _nsnap += 1 # Añadir la propia
             return _nsnap
         else:
             for ch_snap in snap.childSnapshotList:
                 _nsnap += walk_snapshots(ch_snap, lista)
-            lista.append(snap)
-            _nsnap += 1 # La snapshot propia
+            if "CompleteRestorePoint" not in snap.description: # Evitar que las replicas de veeam aparezcan
+                lista.append(snap)
+                _nsnap += 1 # Añadir la propia
             return _nsnap
 
 
@@ -77,7 +79,8 @@ def get_data(si):
             vm_datos = {'vm': vm.name, 'snapshots': 0, 'snapshots_list': []}
             for snap in vm.snapshot.rootSnapshotList:
                 vm_datos['snapshots'] += walk_snapshots(snap, vm_datos['snapshots_list'])
-            vms.append(vm_datos)
+            if vm_datos['snapshots'] != 0:
+                vms.append(vm_datos)
 
     return vms
 
@@ -141,11 +144,14 @@ def check(data, nsnap, ndays, verbose):
 
         # PREPARAR OUTPUT
         NSNAP = number_snap
-        AGE = td_old.days
+        if td_old is not None:
+            AGE = td_old.days
+        else:
+            AGE = 0
         # There are <number> in <host>. <excla>
         number_format = 'There are {} snapshots, {}.{}'
         # The oldest snapshot has <days> days. <excla>
-        age_str = 'The oldest snapshot has {} days old ({})'.format(td_old.days, vm_oldest_snap['vm'])
+        age_str = 'The oldest snapshot has {} days old ({})'.format(AGE, vm_oldest_snap['vm'])
         newest_snap_str = 'The newest snapshot has {} days ({}).'.format(td_recent.days, vm_newest_snap['vm'])
 
         # Comprobar THRESHOLD Numero
